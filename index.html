@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎰 パチ屋換金率＆景品計算ナビ</title>
+    <title>🎰 換金率＆景品計算ナビ</title>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -244,20 +244,20 @@
             <label id="input-label">獲得枚数 (枚)</label>
             <input type="number" id="count-input" placeholder="例: 1250" inputmode="numeric">
             <div class="quick-btns">
-                <button class="q-btn" onclick="addCount(100)">+100</button>
-                <button class="q-btn" onclick="addCount(500)">+500</button>
-                <button class="q-btn" onclick="addCount(1000)">+1000</button>
-                <button class="q-btn" onclick="addCount(-100)">-100</button>
+                <button class="q-btn" type="button" onclick="addCount(100)">+100</button>
+                <button class="q-btn" type="button" onclick="addCount(500)">+500</button>
+                <button class="q-btn" type="button" onclick="addCount(1000)">+1000</button>
+                <button class="q-btn" type="button" onclick="addCount(-100)">-100</button>
             </div>
         </div>
         <div class="input-group" style="margin-top: 10px;">
             <label>投資額 (円)</label>
             <input type="number" id="investment-input" placeholder="例: 10000" inputmode="numeric">
             <div class="quick-btns">
-                <button class="q-btn" onclick="addInvest(1000)">+1千</button>
-                <button class="q-btn" onclick="addInvest(5000)">+5千</button>
-                <button class="q-btn" onclick="addInvest(10000)">+1万</button>
-                <button class="q-btn" onclick="clearInvest()">リセット</button>
+                <button class="q-btn" type="button" onclick="addInvest(1000)">+1千</button>
+                <button class="q-btn" type="button" onclick="addInvest(5000)">+5千</button>
+                <button class="q-btn" type="button" onclick="addInvest(10000)">+1万</button>
+                <button class="q-btn" type="button" onclick="clearInvest()">リセット</button>
             </div>
         </div>
     </div>
@@ -334,4 +334,261 @@
             </div>
             <div class="input-group">
                 <label>中景品 (円)</label>
-                <input type="number" id="val-medium" value="1000
+                <input type="number" id="val-medium" value="1000">
+            </div>
+            <div class="input-group">
+                <label>必要数 (枚/玉)</label>
+                <input type="number" id="req-medium" value="51">
+            </div>
+            <div class="input-group">
+                <label>小景品 (円)</label>
+                <input type="number" id="val-small" value="200">
+            </div>
+            <div class="input-group">
+                <label>必要数 (枚/玉)</label>
+                <input type="number" id="req-small" value="10">
+            </div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 12px;">
+            <button class="btn btn-primary" type="button" onclick="saveStoreConfig()">この店舗設定を保存</button>
+            <button class="btn btn-danger" type="button" onclick="deleteStoreConfig()">削除</button>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+
+        const defaultStores = [
+            {
+                name: "46スロ(5.1枚交換店)",
+                type: "slot",
+                rent: 46,
+                exchange: 5.1,
+                valL: 5000, reqL: 253,
+                valM: 1000, reqM: 51,
+                valS: 200, reqS: 10
+            },
+            {
+                name: "50スロ(等価店)",
+                type: "slot",
+                rent: 50,
+                exchange: 5.0,
+                valL: 5000, reqL: 250,
+                valM: 1000, reqM: 50,
+                valS: 200, reqS: 10
+            },
+            {
+                name: "4パチ(28玉交換店)",
+                type: "pachi",
+                rent: 250,
+                exchange: 28,
+                valL: 5000, reqL: 1400,
+                valM: 1000, reqM: 280,
+                valS: 200, reqS: 56
+            }
+        ];
+
+        let stores = [];
+
+        function initApp() {
+            try {
+                const saved = localStorage.getItem('pachi_stores_v3');
+                stores = saved ? JSON.parse(saved) : defaultStores;
+            } catch (e) {
+                stores = defaultStores;
+            }
+            updateStoreSelect();
+            if (stores.length > 0) {
+                loadStoreByIndex(0);
+            }
+            calculate();
+        }
+
+        function updateStoreSelect() {
+            const select = $('store-select');
+            select.innerHTML = '';
+            stores.forEach((store, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = store.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadStoreByIndex(index) {
+            const store = stores[index];
+            if (!store) return;
+
+            $('store-name').value = store.name;
+            $('type-select').value = store.type;
+            $('input-label').innerText = store.type === 'slot' ? '獲得枚数 (枚)' : '獲得玉数 (玉)';
+            $('rent-rate').value = store.rent;
+            $('exchange-rate').value = store.exchange;
+            $('val-large').value = store.valL;
+            $('req-large').value = store.reqL;
+            $('val-medium').value = store.valM;
+            $('req-medium').value = store.reqM;
+            $('val-small').value = store.valS;
+            $('req-small').value = store.reqS;
+        }
+
+        $('store-select').addEventListener('change', (e) => {
+            loadStoreByIndex(e.target.value);
+            calculate();
+        });
+
+        // クイック加算ボタン用
+        window.addCount = function(num) {
+            const input = $('count-input');
+            const current = parseInt(input.value) || 0;
+            input.value = Math.max(0, current + num);
+            calculate();
+        };
+
+        window.addInvest = function(num) {
+            const input = $('investment-input');
+            const current = parseInt(input.value) || 0;
+            input.value = current + num;
+            calculate();
+        };
+
+        window.clearInvest = function() {
+            $('investment-input').value = '';
+            calculate();
+        };
+
+        // リアルタイム入力監視（input と change の両方で確実に計算を発生させる）
+        const inputs = [
+            'count-input', 'investment-input', 'rent-rate', 'exchange-rate',
+            'val-large', 'req-large', 'val-medium', 'req-medium', 'val-small', 'req-small'
+        ];
+        inputs.forEach(id => {
+            const el = $(id);
+            if (el) {
+                el.addEventListener('input', calculate);
+                el.addEventListener('change', calculate);
+            }
+        });
+
+        $('type-select').addEventListener('change', (e) => {
+            const isSlot = e.target.value === 'slot';
+            $('input-label').innerText = isSlot ? '獲得枚数 (枚)' : '獲得玉数 (玉)';
+            calculate();
+        });
+
+        window.saveStoreConfig = function() {
+            const name = $('store-name').value.trim() || '無題の店舗';
+            const newStore = {
+                name: name,
+                type: $('type-select').value,
+                rent: parseFloat($('rent-rate').value) || 0,
+                exchange: parseFloat($('exchange-rate').value) || 0,
+                valL: parseInt($('val-large').value) || 0,
+                reqL: parseInt($('req-large').value) || 0,
+                valM: parseInt($('val-medium').value) || 0,
+                reqM: parseInt($('req-medium').value) || 0,
+                valS: parseInt($('val-small').value) || 0,
+                reqS: parseInt($('req-small').value) || 0,
+            };
+
+            const existingIndex = stores.findIndex(s => s.name === name);
+            if (existingIndex >= 0) {
+                stores[existingIndex] = newStore;
+            } else {
+                stores.push(newStore);
+            }
+
+            try {
+                localStorage.setItem('pachi_stores_v3', JSON.stringify(stores));
+                updateStoreSelect();
+                $('store-select').value = stores.findIndex(s => s.name === name);
+                alert(`「${name}」の設定を保存しました！`);
+            } catch (err) {
+                alert('保存に失敗しました。');
+            }
+        };
+
+        window.deleteStoreConfig = function() {
+            const currentIndex = parseInt($('store-select').value);
+            if (stores.length <= 1) {
+                alert('これ以上削除できません（最低1つの設定が必要です）。');
+                return;
+            }
+            const name = stores[currentIndex].name;
+            if (confirm(`「${name}」を削除してもよろしいですか？`)) {
+                stores.splice(currentIndex, 1);
+                localStorage.setItem('pachi_stores_v3', JSON.stringify(stores));
+                updateStoreSelect();
+                loadStoreByIndex(0);
+                calculate();
+            }
+        };
+
+        function calculate() {
+            const count = parseInt($('count-input').value) || 0;
+            const invest = parseInt($('investment-input').value) || 0;
+
+            const valL = parseInt($('val-large').value) || 0;
+            const reqL = parseInt($('req-large').value) || 0;
+            const valM = parseInt($('val-medium').value) || 0;
+            const reqM = parseInt($('req-medium').value) || 0;
+            const valS = parseInt($('val-small').value) || 0;
+            const reqS = parseInt($('req-small').value) || 0;
+
+            let current = count;
+
+            const numL = reqL > 0 ? Math.floor(current / reqL) : 0;
+            if (reqL > 0) current %= reqL;
+
+            const numM = reqM > 0 ? Math.floor(current / reqM) : 0;
+            if (reqM > 0) current %= reqM;
+
+            const numS = reqS > 0 ? Math.floor(current / reqS) : 0;
+            if (reqS > 0) current %= reqS;
+
+            const rest = current;
+            const totalMoney = (numL * valL) + (numM * valM) + (numS * valS);
+            const profit = totalMoney - invest;
+
+            $('exchange-total').innerText = '¥' + totalMoney.toLocaleString();
+            
+            const profitEl = $('profit-loss');
+            if (profit > 0) {
+                profitEl.innerText = `差引収支: +¥${profit.toLocaleString()}`;
+                profitEl.style.color = '#10b981';
+            } else if (profit < 0) {
+                profitEl.innerText = `差引収支: -¥${Math.abs(profit).toLocaleString()}`;
+                profitEl.style.color = '#ef4444';
+            } else {
+                profitEl.innerText = `差引収支: ±¥0`;
+                profitEl.style.color = '#94a3b8';
+            }
+
+            $('count-large').innerText = numL;
+            $('count-medium').innerText = numM;
+            $('count-small').innerText = numS;
+            $('count-rest').innerText = rest;
+
+            $('label-large').innerText = `大 (${valL}円)`;
+            $('label-medium').innerText = `中 (${valM}円)`;
+            $('label-small').innerText = `小 (${valS}円)`;
+
+            const adviceEl = $('advice-text');
+            if (count === 0) {
+                adviceEl.innerText = '獲得枚数・玉数を入力してください';
+            } else if (reqS > 0 && rest > 0) {
+                const needForS = reqS - rest;
+                adviceEl.innerText = `💡 あと ${needForS} 枚/玉 で 小景品 (+¥${valS}) 追加可能！`;
+            } else if (rest === 0) {
+                adviceEl.innerText = '✨ 端数なし！ピッタリ交換できます';
+            } else {
+                adviceEl.innerText = `余り: ${rest} 枚/玉`;
+            }
+        }
+
+        // アプリ起動時の初期化
+        initApp();
+    </script>
+</body>
+</html>
