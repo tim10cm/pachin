@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パチ屋換金率＆景品計算ナビ</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-gold: #f59e0b;
+            --accent-blue: #38bdf8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            max-width: 480px;
+            margin: 0 auto;
+            padding-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--accent-gold);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            background-color: #334155;
+            color: var(--text-main);
+            border: none;
+            padding: 10px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: #000;
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .result-main {
+            text-align: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        .result-val {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--accent-gold);
+            margin: 4px 0;
+        }
+
+        .prize-breakdown {
+            display: flex;
+            justify-content: space-around;
+            margin: 16px 0;
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .prize-item {
+            text-align: center;
+        }
+
+        .prize-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-blue);
+        }
+
+        .prize-name {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+        }
+
+        .advice-box {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .custom-prize-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .store-select-box {
+            border: 1px solid var(--accent-gold);
+            background-color: rgba(245, 158, 11, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎰 換金率＆景品計算ナビ</h1>
+
+    <!-- マイ店舗切替 -->
+    <div class="card store-select-box">
+        <div class="card-title" style="color: var(--accent-gold);">🏪 店舗設定の切替</div>
+        <div class="input-group">
+            <label>保存済み店舗から選ぶ</label>
+            <select id="store-select"></select>
+        </div>
+    </div>
+
+    <!-- 獲得数・投資入力 -->
+    <div class="card">
+        <div class="card-title">① 出玉・収支入力</div>
+        <div class="input-group">
+            <label id="input-label">獲得枚数 (枚)</label>
+            <input type="number" id="count-input" placeholder="例: 1250" inputmode="numeric">
+        </div>
+        <div class="input-group">
+            <label>投資額 (円)</label>
+            <input type="number" id="investment-input" placeholder="例: 10000" step="1000" inputmode="numeric">
+        </div>
+    </div>
+
+    <!-- 結果表示 -->
+    <div class="card">
+        <div class="card-title">② 計算結果</div>
+        <div class="result-main">
+            <div class="result-label">換金予定額</div>
+            <div class="result-val" id="exchange-total">¥0</div>
+            <div class="result-label" id="profit-loss">差引収支: ±¥0</div>
+        </div>
+
+        <div class="prize-breakdown">
+            <div class="prize-item">
+                <div class="prize-count" id="count-large">0</div>
+                <div class="prize-name" id="label-large">大景品</div>
+            </div>
+            <div class="prize-item">
+                <div class="prize-count" id="count-medium">0</div>
+                <div class="prize-name" id="label-medium">中景品</div>
+            </div>
+            <div class="prize-item">
+                <div class="prize-count" id="count-small">0</div>
+                <div class="prize-name" id="label-small">小景品</div>
+            </div>
+            <div class="prize-item">
+                <div class="prize-count" id="count-rest">0</div>
+                <div class="prize-name">余り</div>
+            </div>
+        </div>
+
+        <div class="advice-box" id="advice-text">
+            数値を入力すると計算結果が表示されます
+        </div>
+    </div>
+
+    <!-- ホール・景品設定 -->
+    <div class="card">
+        <div class="card-title">⚙️ 現在の店舗設定・保存</div>
+        
+        <div class="input-group">
+            <label>設定名（店舗名など）</label>
+            <input type="text" id="store-name" value="46スロ(5.1枚交換店)">
+        </div>
+
+        <div class="input-group" style="margin-top: 10px;">
+            <label>種別</label>
+            <select id="type-select">
+                <option value="slot">パチスロ (枚)</option>
+                <option value="pachi">パチンコ (玉)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>貸出レート (1,000円あたりの枚数・玉数)</label>
+            <input type="number" id="rent-rate" value="46">
+        </div>
+
+        <div class="input-group">
+            <label>交換レート (100円に必要な枚数・玉数)</label>
+            <input type="number" id="exchange-rate" value="5.1" step="0.1">
+        </div>
+
+        <div class="card-title" style="margin-top: 16px; margin-bottom: 8px;">特殊景品の設定</div>
+        <div class="custom-prize-grid">
+            <div class="input-group">
+                <label>大景品 (円)</label>
+                <input type="number" id="val-large" value="5000">
+            </div>
+            <div class="input-group">
+                <label>必要数 (枚/玉)</label>
+                <input type="number" id="req-large" value="253">
+            </div>
+            <div class="input-group">
+                <label>中景品 (円)</label>
+                <input type="number" id="val-medium" value="1000">
+            </div>
+            <div class="input-group">
+                <label>必要数 (枚/玉)</label>
+                <input type="number" id="req-medium" value="51">
+            </div>
+            <div class="input-group">
+                <label>小景品 (円)</label>
+                <input type="number" id="val-small" value="200">
+            </div>
+            <div class="input-group">
+                <label>必要数 (枚/玉)</label>
+                <input type="number" id="req-small" value="10">
+            </div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 16px;">
+            <button class="btn btn-primary" onclick="saveStoreConfig()">この店舗設定を保存</button>
+            <button class="btn btn-danger" onclick="deleteStoreConfig()">削除</button>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+
+        const defaultStores = [
+            {
+                name: "46スロ(5.1枚交換店)",
+                type: "slot",
+                rent: 46,
+                exchange: 5.1,
+                valL: 5000, reqL: 253,
+                valM: 1000, reqM: 51,
+                valS: 200, reqS: 10
+            },
+            {
+                name: "50スロ(等価店)",
+                type: "slot",
+                rent: 50,
+                exchange: 5.0,
+                valL: 5000, reqL: 250,
+                valM: 1000, reqM: 50,
+                valS: 200, reqS: 10
+            },
+            {
+                name: "4パチ(28玉交換店)",
+                type: "pachi",
+                rent: 250,
+                exchange: 28,
+                valL: 5000, reqL: 1400,
+                valM: 1000, reqM: 280,
+                valS: 200, reqS: 56
+            }
+        ];
+
+        let stores = [];
+
+        function initApp() {
+            try {
+                const saved = localStorage.getItem('pachi_stores_v2');
+                stores = saved ? JSON.parse(saved) : defaultStores;
+            } catch (e) {
+                stores = defaultStores;
+            }
+            updateStoreSelect();
+            if (stores.length > 0) {
+                loadStoreByIndex(0);
+            }
+            calculate();
+        }
+
+        function updateStoreSelect() {
+            const select = $('store-select');
+            select.innerHTML = '';
+            stores.forEach((store, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = store.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadStoreByIndex(index) {
+            const store = stores[index];
+            if (!store) return;
+
+            $('store-name').value = store.name;
+            $('type-select').value = store.type;
+            $('input-label').innerText = store.type === 'slot' ? '獲得枚数 (枚)' : '獲得玉数 (玉)';
+            $('rent-rate').value = store.rent;
+            $('exchange-rate').value = store.exchange;
+            $('val-large').value = store.valL;
+            $('req-large').value = store.reqL;
+            $('val-medium').value = store.valM;
+            $('req-medium').value = store.reqM;
+            $('val-small').value = store.valS;
+            $('req-small').value = store.reqS;
+        }
+
+        $('store-select').addEventListener('change', (e) => {
+            loadStoreByIndex(e.target.value);
+            calculate();
+        });
+
+        const inputs = [
+            'count-input', 'investment-input', 'rent-rate', 'exchange-rate',
+            'val-large', 'req-large', 'val-medium', 'req-medium', 'val-small', 'req-small'
+        ];
+        inputs.forEach(id => $(id).addEventListener('input', calculate));
+
+        $('type-select').addEventListener('change', (e) => {
+            const isSlot = e.target.value === 'slot';
+            $('input-label').innerText = isSlot ? '獲得枚数 (枚)' : '獲得玉数 (玉)';
+            calculate();
+        });
+
+        window.saveStoreConfig = function() {
+            const name = $('store-name').value.trim() || '無題の店舗';
+            const newStore = {
+                name: name,
+                type: $('type-select').value,
+                rent: parseFloat($('rent-rate').value) || 0,
+                exchange: parseFloat($('exchange-rate').value) || 0,
+                valL: parseInt($('val-large').value) || 0,
+                reqL: parseInt($('req-large').value) || 0,
+                valM: parseInt($('val-medium').value) || 0,
+                reqM: parseInt($('req-medium').value) || 0,
+                valS: parseInt($('val-small').value) || 0,
+                reqS: parseInt($('req-small').value) || 0,
+            };
+
+            const existingIndex = stores.findIndex(s => s.name === name);
+            if (existingIndex >= 0) {
+                stores[existingIndex] = newStore;
+            } else {
+                stores.push(newStore);
+            }
+
+            try {
+                localStorage.setItem('pachi_stores_v2', JSON.stringify(stores));
+                updateStoreSelect();
+                $('store-select').value = stores.findIndex(s => s.name === name);
+                alert(`「${name}」の設定を保存しました！`);
+            } catch (err) {
+                alert('保存に失敗しました。');
+            }
+        };
+
+        window.deleteStoreConfig = function() {
+            const currentIndex = parseInt($('store-select').value);
+            if (stores.length <= 1) {
+                alert('これ以上削除できません（最低1つの設定が必要です）。');
+                return;
+            }
+            const name = stores[currentIndex].name;
+            if (confirm(`「${name}」を削除してもよろしいですか？`)) {
+                stores.splice(currentIndex, 1);
+                localStorage.setItem('pachi_stores_v2', JSON.stringify(stores));
+                updateStoreSelect();
+                loadStoreByIndex(0);
+                calculate();
+            }
+        };
+
+        function calculate() {
+            const count = parseInt($('count-input').value) || 0;
+            const invest = parseInt($('investment-input').value) || 0;
+
+            const valL = parseInt($('val-large').value) || 0;
+            const reqL = parseInt($('req-large').value) || 0;
+            const valM = parseInt($('val-medium').value) || 0;
+            const reqM = parseInt($('req-medium').value) || 0;
+            const valS = parseInt($('val-small').value) || 0;
+            const reqS = parseInt($('req-small').value) || 0;
+
+            let current = count;
+
+            const numL = reqL > 0 ? Math.floor(current / reqL) : 0;
+            if (reqL > 0) current %= reqL;
+
+            const numM = reqM > 0 ? Math.floor(current / reqM) : 0;
+            if (reqM > 0) current %= reqM;
+
+            const numS = reqS > 0 ? Math.floor(current / reqS) : 0;
+            if (reqS > 0) current %= reqS;
+
+            const rest = current;
+            const totalMoney = (numL * valL) + (numM * valM) + (numS * valS);
+            const profit = totalMoney - invest;
+
+            $('exchange-total').innerText = '¥' + totalMoney.toLocaleString();
+            
+            const profitEl = $('profit-loss');
+            if (profit > 0) {
+                profitEl.innerText = `差引収支: +¥${profit.toLocaleString()}`;
+                profitEl.style.color = '#10b981';
+            } else if (profit < 0) {
+                profitEl.innerText = `差引収支: -¥${Math.abs(profit).toLocaleString()}`;
+                profitEl.style.color = '#ef4444';
+            } else {
+                profitEl.innerText = `差引収支: ±¥0`;
+                profitEl.style.color = '#94a3b8';
+            }
+
+            $('count-large').innerText = numL;
+            $('count-medium').innerText = numM;
+            $('count-small').innerText = numS;
+            $('count-rest').innerText = rest;
+
+            $('label-large').innerText = `大 (${valL}円)`;
+            $('label-medium').innerText = `中 (${valM}円)`;
+            $('label-small').innerText = `小 (${valS}円)`;
+
+            const adviceEl = $('advice-text');
+            if (count === 0) {
+                adviceEl.innerText = '獲得枚数・玉数を入力してください';
+            } else if (reqS > 0 && rest > 0) {
+                const needForS = reqS - rest;
+                adviceEl.innerText = `💡 あと ${needForS} 枚/玉 で 小景品 (+¥${valS}) 追加可能！`;
+            } else if (rest === 0) {
+                adviceEl.innerText = '✨ 端数なし！ピッタリ交換できます';
+            } else {
+                adviceEl.innerText = `余り: ${rest} 枚/玉`;
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
